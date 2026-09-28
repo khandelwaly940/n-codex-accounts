@@ -41,7 +41,7 @@ class InstallTests(unittest.TestCase):
         self.auth.write_bytes(test_safety.IdentitySafety.fixture())
         self.auth.chmod(0o600)
         self.binary = self.root / 'fake-codex'
-        self.binary.write_text('#!/bin/sh\nprintf "codex-cli 0.157.1\\n"\n')
+        self.binary.write_text('#!/bin/sh\nprintf "codex-cli 0.158.0\\n"\n')
         self.binary.chmod(0o755)
 
     def test_install_repeat_preserves_auth_shell_and_accounts(self):
@@ -158,10 +158,10 @@ class InstallTests(unittest.TestCase):
             result = subprocess.run(['zsh', '-f', '-c', script, 'fixture', str(installed / 'shell.zsh'), name],
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn('codex-cli 0.157.1', result.stdout)
+            self.assertIn('codex-cli 0.158.0', result.stdout)
 
     def test_download_bootstrap_installs_only_fixture_home(self):
-        archive_root = self.root / 'archive' / 'n-codex-accounts-0.1.0'
+        archive_root = self.root / 'archive' / 'n-codex-accounts-0.1.1'
         shutil.copytree(ROOT / 'setup', archive_root / 'setup')
         source = archive_root / 'setup/install.py'
         source.write_text(source.read_text().replace('Path.home()', f'Path({str(self.root)!r})'))

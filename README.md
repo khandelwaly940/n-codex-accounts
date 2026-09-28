@@ -13,14 +13,14 @@ An independent community tool. Windows, WSL, and Linux are not supported.
 ### 1. Check what you need
 
 - **Python 3.11+**
-- **Codex CLI 0.157.1** on your `PATH`
+- **Codex CLI 0.158.0** on your `PATH`
 - A ChatGPT account with Codex access
 - **VS Code 1.96.2+**, only if you want editor support
 
 Don't have the CLI yet? Install the reviewed version:
 
 ```sh
-npm install -g @openai/codex@0.157.1
+npm install -g @openai/codex@0.158.0
 ```
 
 Already using a newer CLI? Check compatibility before changing versions; don't downgrade an existing installation blindly.
@@ -28,7 +28,7 @@ Already using a newer CLI? Check compatibility before changing versions; don't d
 ### 2. Run the installer
 
 ```zsh
-zsh <(curl -fsSL https://raw.githubusercontent.com/khandelwaly940/n-codex-accounts/v0.1.0/install.sh)
+zsh <(curl -fsSL https://raw.githubusercontent.com/khandelwaly940/n-codex-accounts/v0.1.1/install.sh)
 ```
 
 Follow the prompts. Your existing file-based Codex login becomes **`primary`**. If you don't have one, the installer offers a browser login. You can then add accounts with names such as **`work`** or **`personal`**.
@@ -36,7 +36,7 @@ Follow the prompts. Your existing file-based Codex login becomes **`primary`**. 
 To also install the reviewed VS Code extension, put VS Code in `/Applications` and use this command instead:
 
 ```zsh
-zsh <(curl -fsSL https://raw.githubusercontent.com/khandelwaly940/n-codex-accounts/v0.1.0/install.sh) --with-vscode
+zsh <(curl -fsSL https://raw.githubusercontent.com/khandelwaly940/n-codex-accounts/v0.1.1/install.sh) --with-vscode
 ```
 
 This installs `openai.chatgpt@26.917.62051` and its required extension dependencies. Without the flag, your editor extensions are left alone.
@@ -85,14 +85,14 @@ Normal Codex approvals remain enabled. Other CLI subcommands work as usual.
 
 ## Compatibility
 
-Reviewed on **27 September 2026**:
+CLI baseline updated on **28 September 2026**; extension review from 27 September 2026:
 
 | Component | Version |
 | --- | --- |
-| Codex CLI | **0.157.1** |
+| Codex CLI | **0.158.0** |
 | VS Code extension `openai.chatgpt` | **26.917.62051** |
 | Codex bundled with that extension | **0.155.0-alpha.16.3** |
-| This installer | **0.1.0** |
+| This installer | **0.1.1** |
 
 **21 offline tests passed**, including installation, repeat installation, account routing, and shared-history checks. The extension package and bundled command interface were inspected separately. Real login, model requests, and VS Code chats were not used to certify this release. After installing, try a simple request per account and a sequential cross-account chat resume. Intel macOS has not been tested on Intel hardware.
 

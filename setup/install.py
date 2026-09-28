@@ -14,7 +14,7 @@ import sys
 import tempfile
 import tomllib
 
-CLI_VERSION = '0.157.1'
+CLI_VERSION = '0.158.0'
 EXTENSION_VERSION = '26.917.62051'
 START = '# BEGIN N_CODEX_ACCOUNTS'
 END = '# END N_CODEX_ACCOUNTS'
