@@ -16,6 +16,7 @@ import tomllib
 
 CLI_VERSION = '0.158.0'
 EXTENSION_VERSION = '26.917.62051'
+VERSION = '0.2.0'
 START = '# BEGIN N_CODEX_ACCOUNTS'
 END = '# END N_CODEX_ACCOUNTS'
 SOURCE = Path(__file__).resolve().parent
@@ -33,7 +34,10 @@ def load_accounts(user_root):
     return accounts
 
 
-def install(user_root, binary, *, login=True):
+def install(user_root, binary, *, login=True, managed_update=False):
+    journal = user_root/'.local/share/n-codex-accounts/update-journal.json'
+    if not managed_update and journal.exists() and json.loads(journal.read_text())['status'] not in ('complete', 'rolled-back'):
+        raise ValueError('An unfinished update needs recovery before installation')
     accounts = load_accounts(user_root)
     canonical = accounts.CANONICAL
     shell = user_root / '.zshrc'
@@ -95,13 +99,15 @@ def install(user_root, binary, *, login=True):
             shutil.copy2(target, backup / target.name)
         accounts.atomic_write(target, source.read_text(), 0o644)
     aliases = {'accounts': 'accounts.py', 'preflight': 'preflight.py',
-               'run': 'run.zsh', 'guard': 'guard.zsh', 'vscode-account': 'vscode.zsh'}
+               'run': 'run.zsh', 'guard': 'guard.zsh', 'vscode-account': 'vscode.zsh',
+               'ncodex': 'updater.py'}
     for alias, filename in aliases.items():
         interpreter = python if filename.endswith('.py') else '/bin/zsh'
         command = f'#!/bin/sh\nexec {shlex.quote(interpreter)} {shlex.quote(str(destination / filename))} "$@"\n'
         accounts.atomic_write(destination / 'bin' / alias, command, 0o755)
     runtime = f'export CODEX_REAL_BINARY={shlex.quote(str(binary))}\n'
     accounts.atomic_write(destination / 'runtime.zsh', runtime, 0o600)
+    accounts.atomic_write(destination / 'VERSION', VERSION + '\n', 0o644)
     accounts.ensure_core()
     block = f'{START}\nsource "$HOME/.local/share/n-codex-accounts/shell.zsh"\n{END}\n'
     if START in previous:

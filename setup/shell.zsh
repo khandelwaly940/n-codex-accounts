@@ -3,6 +3,22 @@ source "$HOME/.local/share/n-codex-accounts/runtime.zsh"
 export CODEX_REAL="$HOME/.local/share/n-codex-accounts/bin/run"
 export CODEX_ACCOUNTS="$HOME/.local/share/n-codex-accounts/bin/accounts"
 
+ncodex() {
+  "$HOME/.local/share/n-codex-accounts/bin/ncodex" "$@"
+}
+
+_ncodex_update_notice() {
+  local tool="$HOME/.local/share/n-codex-accounts/bin/ncodex"
+  [[ -x "$tool" ]] || return 0
+  "$tool" notice
+  local result=$?
+  (( result == 21 )) && return 1
+  if (( result == 20 )); then
+    source "$HOME/.local/share/n-codex-accounts/shell.zsh"
+  fi
+  return 0
+}
+
 _ncodex_offer_launch() {
   local reply
   printf "Open Codex now? [y/N]: "
@@ -64,6 +80,7 @@ codex() {
       print -u2 -- "Usage: codex $command"
       return 2
     fi
+    _ncodex_update_notice || return $?
     export CODEX_HOME="$selected_home"
     export CODEX_SQLITE_HOME="$HOME/.codex"
     echo "Codex account selected: ${command:u}"

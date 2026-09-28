@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Read-only checks before launching a selected account."""
+from contextlib import closing
+import json
 import os
 from pathlib import Path
 import sqlite3
@@ -29,7 +31,7 @@ def check(home, canonical):
         raise ValueError('sqlite_home conflicts with shared history')
     # A genuinely fresh home has no database until its first Codex session.
     for db in canonical.glob('state_*.sqlite'):
-        with sqlite3.connect(db.resolve().as_uri() + '?mode=ro', uri=True) as connection:
+        with closing(sqlite3.connect(db.resolve().as_uri() + '?mode=ro', uri=True)) as connection:
             if connection.execute('PRAGMA quick_check').fetchall() != [('ok',)]:
                 raise ValueError(f'State database integrity check failed: {db.name}')
 
@@ -38,6 +40,9 @@ def main():
     home = Path(sys.argv[1]).expanduser().resolve()
     canonical = (Path.home() / '.codex').resolve()
     try:
+        journal = Path.home()/'.local/share/n-codex-accounts/update-journal.json'
+        if journal.exists() and json.loads(journal.read_text())['status'] not in ('complete', 'rolled-back'):
+            raise ValueError('An interrupted or active update needs recovery before launching')
         check(home, canonical)
         location = Path(__file__).resolve().parent
         subprocess.run([sys.executable, str(location / 'validate_lineage.py'),

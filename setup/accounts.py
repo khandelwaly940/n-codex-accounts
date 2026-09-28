@@ -89,9 +89,8 @@ def write_registry(value: dict) -> None:
 
 def ensure_core() -> dict:
     value = read_registry()
-    current = value["accounts"].get("primary")
-    if current and current.get("home") != str(CANONICAL):
-        fail("primary account points to an unexpected home")
+    current = any(Path(entry["home"]).resolve() == CANONICAL.resolve()
+                  for entry in value["accounts"].values())
     if not current:
         if not (CANONICAL / "auth.json").is_file():
             fail("primary credential is missing; run the installer first")

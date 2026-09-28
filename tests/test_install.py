@@ -117,7 +117,7 @@ class InstallTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             preflight.check(self.canonical, self.canonical)
         db = self.canonical / 'state_5.sqlite'
-        with sqlite3.connect(db) as con:
+        with contextlib.closing(sqlite3.connect(db)) as con:
             con.execute('CREATE TABLE sample (value INTEGER)')
         original = db.read_bytes()
         with patch.dict(os.environ, {}, clear=True):
@@ -161,7 +161,7 @@ class InstallTests(unittest.TestCase):
             self.assertIn('codex-cli 0.158.0', result.stdout)
 
     def test_download_bootstrap_installs_only_fixture_home(self):
-        archive_root = self.root / 'archive' / 'n-codex-accounts-0.1.1'
+        archive_root = self.root / 'archive' / 'n-codex-accounts-0.2.0'
         shutil.copytree(ROOT / 'setup', archive_root / 'setup')
         source = archive_root / 'setup/install.py'
         source.write_text(source.read_text().replace('Path.home()', f'Path({str(self.root)!r})'))

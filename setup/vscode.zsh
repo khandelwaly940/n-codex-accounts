@@ -3,6 +3,9 @@ set -euo pipefail
 root="$HOME/.local/share/n-codex-accounts"
 source "$root/runtime.zsh"
 [[ $# -ge 1 ]] || { print -u2 'Usage: vscode-account <name> [folder]'; exit 2; }
+notice_result=0
+"$root/bin/ncodex" notice || notice_result=$?
+(( notice_result != 21 )) || exit 1
 account="$1"
 shift
 selected_home="$("$root/bin/accounts" resolve "$account")"
