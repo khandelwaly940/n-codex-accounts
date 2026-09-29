@@ -12,7 +12,7 @@ out = Path(sys.argv[1]).resolve(); out.mkdir(parents=True, exist_ok=True)
 files = [ROOT/n for n in ('README.md', 'LICENSE', 'install.sh', '.gitignore')]
 files += sorted((ROOT/'setup').glob('*.py')) + sorted((ROOT/'setup').glob('*.zsh'))
 assert all(p.is_file() and not p.is_symlink() for p in files)
-manifest = {'version': '0.2.0', 'cli_versions': ['0.158.0'],
+manifest = {'version': '0.2.1', 'cli_versions': ['0.158.0', '0.159.0'],
             'files': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}
 archive = out/'n-codex-accounts.tar.gz'
 with tarfile.open(archive, 'w:gz') as bundle:

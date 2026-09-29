@@ -14,9 +14,10 @@ import sys
 import tempfile
 import tomllib
 
-CLI_VERSION = '0.158.0'
+CLI_VERSION = '0.159.0'
+SUPPORTED_CLI_VERSIONS = ('0.158.0', '0.159.0')
 EXTENSION_VERSION = '26.917.62051'
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 START = '# BEGIN N_CODEX_ACCOUNTS'
 END = '# END N_CODEX_ACCOUNTS'
 SOURCE = Path(__file__).resolve().parent
@@ -131,8 +132,8 @@ def main():
         parser.error(f'Install the CLI first: npm install -g @openai/codex@{CLI_VERSION}')
     binary = Path(binary).expanduser().absolute()
     actual = subprocess.check_output([str(binary), '--version'], text=True).strip()
-    if actual != f'codex-cli {CLI_VERSION}':
-        parser.error(f'Reviewed CLI is {CLI_VERSION}; found {actual}. Do not downgrade newer migrated state automatically.')
+    if actual not in {f'codex-cli {version}' for version in SUPPORTED_CLI_VERSIONS}:
+        parser.error(f'Reviewed CLI versions are {", ".join(SUPPORTED_CLI_VERSIONS)}; found {actual}. Do not downgrade newer migrated state automatically.')
     code = Path('/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code')
     if args.with_vscode and not code.is_file():
         parser.error('Install Visual Studio Code in /Applications before using --with-vscode')

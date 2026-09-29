@@ -36,7 +36,7 @@ class UpdateTests(unittest.TestCase):
         self.environment = patch.dict(os.environ, {'CODEX_REAL_BINARY': str(self.binary)})
         self.environment.start(); self.addCleanup(self.environment.stop)
         self.payload = self.user/'payload'; shutil.copytree(test_install.ROOT/'setup', self.payload/'setup')
-        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.0', 'cli_versions': ['0.158.0']}))
+        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.1', 'cli_versions': ['0.158.0', '0.159.0']}))
         self.shell = self.user/'.zshrc'
         self.shell.write_text(f'''# my settings
 export MY_SETTING=yes
@@ -81,6 +81,12 @@ codex() {{
         self.assertEqual(set(proposed['registry']['accounts']), {'home', 'primary', 'work'})
         self.assertTrue(proposed['layout'])
         self.assertEqual(before, updater.fingerprint([self.shell, self.canonical, self.secondary]))
+
+    def test_plan_accepts_new_cli_without_touching_credentials(self):
+        self.binary.write_text('#!/bin/sh\nprintf "codex-cli 0.159.0\\n"\n')
+        proposed = self.plan()
+        self.assertEqual(proposed['origin'], 'legacy two-account')
+        self.assert_auth_untouched()
 
     def test_migrate_separate_history_preserves_originals_and_auth(self):
         self.rollout(self.canonical, 'one')
