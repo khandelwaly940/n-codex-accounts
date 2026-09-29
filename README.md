@@ -28,7 +28,7 @@ Already using a newer CLI? Check compatibility before changing versions; don't d
 ### 2. Run the installer
 
 ```zsh
-zsh <(curl -fsSL https://raw.githubusercontent.com/khandelwaly940/n-codex-accounts/v0.2.0/install.sh)
+zsh <(curl -fsSL https://raw.githubusercontent.com/khandelwaly940/n-codex-accounts/main/install.sh)
 ```
 
 Follow the prompts. Your existing file-based Codex login becomes **`primary`**. If you don't have one, the installer offers a browser login. You can then add accounts with names such as **`work`** or **`personal`**.
@@ -36,10 +36,12 @@ Follow the prompts. Your existing file-based Codex login becomes **`primary`**. 
 To also install the reviewed VS Code extension, put VS Code in `/Applications` and use this command instead:
 
 ```zsh
-zsh <(curl -fsSL https://raw.githubusercontent.com/khandelwaly940/n-codex-accounts/v0.2.0/install.sh) --with-vscode
+zsh <(curl -fsSL https://raw.githubusercontent.com/khandelwaly940/n-codex-accounts/main/install.sh) --with-vscode
 ```
 
 This installs `openai.chatgpt@26.917.62051` and its required extension dependencies. Without the flag, your editor extensions are left alone.
+
+The installer downloads the latest published release and verifies its checksums before installing. This guide's reviewed CLI and extension versions still apply; the installer stops if your CLI version is unsupported by that release.
 
 ### 3. Start using it
 

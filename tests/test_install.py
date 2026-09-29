@@ -1,5 +1,6 @@
 """Temporary-directory tests; never invoke a real login or relogin flow."""
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -161,20 +162,30 @@ class InstallTests(unittest.TestCase):
             self.assertIn('codex-cli 0.158.0', result.stdout)
 
     def test_download_bootstrap_installs_only_fixture_home(self):
-        archive_root = self.root / 'archive' / 'n-codex-accounts-0.2.0'
+        archive_root = self.root / 'archive'
         shutil.copytree(ROOT / 'setup', archive_root / 'setup')
         source = archive_root / 'setup/install.py'
         source.write_text(source.read_text().replace('Path.home()', f'Path({str(self.root)!r})'))
-        archive = self.root / 'release.tar.gz'
+        files = {str(path.relative_to(archive_root)): hashlib.sha256(path.read_bytes()).hexdigest()
+                 for path in (archive_root / 'setup').iterdir() if path.is_file()}
+        (archive_root / 'release.json').write_text(json.dumps({'version': '0.2.0', 'files': files}))
+        archive = self.root / 'n-codex-accounts.tar.gz'
         with tarfile.open(archive, 'w:gz') as bundle:
-            bundle.add(archive_root, arcname=archive_root.name)
+            for name in sorted(files):
+                bundle.add(archive_root / name, arcname=name)
+            bundle.add(archive_root / 'release.json', arcname='release.json')
+        checksums = self.root / 'SHA256SUMS'
+        checksums.write_text(f'{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}\n')
         bootstrap = self.root / 'install.sh'
         shutil.copy2(ROOT / 'install.sh', bootstrap)
         mock_bin = self.root / 'mock-bin'
         mock_bin.mkdir()
         curl = mock_bin / 'curl'
         curl.write_text('#!' + os.sys.executable + '\nimport shutil,sys\n'
-                        + f'shutil.copyfile({str(archive)!r},sys.argv[sys.argv.index("--output")+1])\n')
+                        + f'root={str(self.root)!r}\n'
+                        + 'url=sys.argv[sys.argv.index("--output")-1]\n'
+                        + 'if not url.startswith("https://github.com/khandelwaly940/n-codex-accounts/releases/latest/download/"): sys.exit(10)\n'
+                        + 'shutil.copyfile(root+"/"+url.rsplit("/",1)[-1],sys.argv[sys.argv.index("--output")+1])\n')
         curl.chmod(0o755)
         environment = os.environ.copy()
         environment['PATH'] = str(mock_bin) + os.pathsep + environment['PATH']
