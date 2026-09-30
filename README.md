@@ -78,7 +78,7 @@ After success, open a new terminal or run `source ~/.zshrc`.
 
 On the first interactive `codex <account>` or `vscode-account <account>` launch each day, the helper checks GitHub for up to three seconds. No account names, credentials, or chats are sent.
 
-- **Update now:** see release notes and a migration plan, then approve separately.
+- **Update now:** see a short change summary and any migration requirement, then approve separately. Enter `d` for concise details or use `ncodex update --plan` to inspect account paths.
 - **Not now:** launch normally; the next reminder is on the next day's first launch.
 - **Offline:** launch normally. There is no scheduled background job.
 
@@ -93,6 +93,8 @@ ncodex rollback         # Guarded helper/config rollback where safe
 A helper-only update can leave existing chats running. Don't start additional launches during installation. History migrations require affected writers to stop. Codex CLI and editor extensions are not upgraded by this command. Public launches use normal approvals; this is shown in the migration plan when moving from an older setup.
 
 Backups and an interrupted-update journal live under `~/.local/share/n-codex-accounts`. Completed history migrations are **not automatically rolled back later**, because that could hide newer chats. Original folders are retained for reviewed recovery. If the shell helper is unavailable after interruption, the downloaded bootstrap accepts `--rollback` for eligible helper/config recovery. No rollback replaces credentials or databases.
+
+Update errors show a short reason; longer diagnostic text is saved privately in `~/.local/share/n-codex-accounts/update-error.json`. Users upgrading from 0.2.1 or earlier may see the previous update screen once; the compact screen applies after installing 0.2.2, or immediately through the latest downloaded bootstrap.
 
 ## Everyday use
 
@@ -130,7 +132,7 @@ CLI baseline updated on **29 September 2026**; extension review from 27 Septembe
 | Codex CLI | **0.159.0** recommended; **0.158.0** supported |
 | VS Code extension `openai.chatgpt` | **26.917.62051** |
 | Codex bundled with that extension | **0.155.0-alpha.16.3** |
-| This installer | **0.2.1** |
+| This installer | **0.2.2** |
 
 **Offline regression tests cover** installation, repeat installation, account routing, migration, shared-history checks, failure recovery, and daily notices. The extension package and bundled command interface were inspected separately. Real login, model requests, and VS Code chats were not used to certify this release. After installing, try a simple request per account and a sequential cross-account chat resume. Intel macOS has not been tested on Intel hardware.
 

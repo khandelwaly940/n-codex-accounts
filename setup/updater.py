@@ -19,7 +19,7 @@ import tarfile
 import tempfile
 import urllib.request
 
-VERSION = '0.2.1'
+VERSION = '0.2.2'
 REPO = 'khandelwaly940/n-codex-accounts'
 PARTS = ('sessions', 'archived_sessions', 'attachments', 'thread-writer-locks')
 SOURCE = Path(__file__).resolve().parent
@@ -353,7 +353,7 @@ def apply(user, payload, stage, proposed):
             module(payload/'setup/preflight.py').check(home.resolve(), canonical.resolve())
         if proposed['layout']:
             subprocess.run([sys.executable, str(payload/'setup/validate_lineage.py'),
-                            str(canonical/'sessions'), str(canonical/'archived_sessions')], check=True)
+                            str(canonical/'sessions'), str(canonical/'archived_sessions')], check=True, stdout=subprocess.DEVNULL)
         # Authentication files are never updater targets; verify their content remained unchanged.
         for home in proposed['homes']:
             p = home/'auth.json'
@@ -423,7 +423,7 @@ def notice(user):
                     completed = update(user, check=False, plan_only=False)
                     return 20 if completed else 0
                 except (Exception, KeyboardInterrupt) as error:
-                    print(f'Update stopped: {error}', file=sys.stderr)
+                    report_error(user, error)
                     journal = runtime(user)/'update-journal.json'
                     if journal.exists() and json.loads(journal.read_text())['status'] not in ('complete', 'rolled-back'):
                         print('An interrupted update needs recovery before launching.', file=sys.stderr)
@@ -434,33 +434,73 @@ def notice(user):
     return 0
 
 
+def concise(value, limit=160):
+    value = ' '.join(str(value).split())
+    return value if len(value) <= limit else value[:limit-1] + '…'
+
+
+def show_details(proposed, manifest, *, paths=False):
+    print('\nUpdate details')
+    print('Accounts: ' + ', '.join(proposed['registry']['accounts']))
+    print('History: merge validated copies; retain original folders.' if proposed['layout'] else
+          'History: keep the existing shared store.')
+    print('Credentials: preserved; no login or logout.')
+    print('CLI: ' + ', '.join(manifest['cli_versions']) + ' supported; CLI and extension are not upgraded.')
+    print('Launches: normal Codex approvals. Backups: ~/.local/share/n-codex-accounts/update-backups/')
+    print('Wait until installation finishes before starting another account launch.')
+    if paths:
+        print('Detected setup: ' + proposed['origin'])
+        for name, entry in proposed['registry']['accounts'].items(): print(f"  {name}: {entry['home']}")
+    print()
+
+
+def report_error(user, error):
+    print('Update stopped: ' + concise(error, 240), file=sys.stderr)
+    try:
+        write(runtime(user)/'update-error.json', {'time': datetime.now().isoformat(), 'error': str(error)})
+        print('Diagnostic detail: ~/.local/share/n-codex-accounts/update-error.json', file=sys.stderr)
+    except OSError:
+        pass
+
+
 def update(user, *, check=False, plan_only=False, bundle=None):
     release = latest() if bundle is None else {'tag': 'v'+json.loads((bundle/'release.json').read_text())['version'], 'notes': 'Downloaded release verified by bootstrap.'}
     installed_path = runtime(user)/'VERSION'
     installed = installed_path.read_text().strip() if installed_path.exists() else 'legacy/unversioned'
-    print(f"Installed: {installed}\nAvailable: {release['tag']}\n{release['notes']}")
+    print(f"n-Codex Accounts {installed} → {release['tag'].removeprefix('v')}")
     if check: return False
     if installed != 'legacy/unversioned' and version(installed) >= version(release['tag']):
         print('No newer helper release.'); return False
     with tempfile.TemporaryDirectory(prefix='ncodex-update-') as directory:
         temporary = Path(directory)
         payload = bundle or download(release['tag'], temporary)
+        manifest = json.loads((payload/'release.json').read_text())
         stage = temporary/'history'
         proposed = plan(user, payload, stage)
-        print('Detected:', proposed['origin'])
-        for name, entry in proposed['registry']['accounts'].items(): print(f"  {name}: {entry['home']}")
-        print('Plan: back up shell/helpers/registry; preserve every credential; install reviewed helpers.')
-        print('History: stage validated union and retain original directories.' if proposed['layout'] else 'History: existing shared paths stay unchanged.')
-        print('Close all affected account writers before migration.' if proposed['layout'] or proposed['origin']!='public' else 'Helper-only update; existing chats may remain running.')
-        print('Do not start additional account launches until the update finishes.')
-        print('CLI and VS Code extension versions will not be changed. Default public launches use normal approvals.')
-        if plan_only: return False
-        if input('Apply this plan? [y/N]: ').strip().lower() != 'y':
-            print('Not now. No installation changes applied.'); return False
+        summary = manifest.get('summary', [])
+        if not isinstance(summary, list): summary = []
+        for item in summary[:3]: print('• ' + concise(item))
+        print('Updates helpers and shared history; preserves credentials.' if proposed['layout'] else
+              'Updates account helpers; preserves credentials and history.')
+        print('Close affected Codex, editor, and daemon processes before updating.' if proposed['layout'] or proposed['origin']!='public' else
+              'Existing chats may stay open. Wait before starting another account launch.')
+        if proposed['origin'] != 'public': print('Migrated launches use normal Codex approvals.')
+        if plan_only:
+            show_details(proposed, manifest, paths=True)
+            return False
+        while True:
+            answer = input('Apply update? [y/N] · d = details: ').strip().lower()
+            if answer == 'd':
+                show_details(proposed, manifest)
+                continue
+            if answer in ('y', 'yes'): break
+            if answer in ('', 'n', 'no'):
+                print('Not now. No installation changes applied.'); return False
+            print('Enter y, n, or d.')
         with lock(user, 'update.lock'):
             accounts = module(SOURCE/'install.py').load_accounts(user) if (SOURCE/'install.py').exists() else module(SOURCE/'accounts.py')
             with accounts.registry_lock(): backup = apply(user, payload, stage, proposed)
-        print(f'Update complete. Backups: {backup}\nOpen a fresh terminal or run: source ~/.zshrc')
+        print(f"Updated to {manifest['version']}. Checks passed.\nOpen a fresh terminal or run: source ~/.zshrc")
         return True
 
 
@@ -484,7 +524,7 @@ def main():
         else: update(user, check=args.check, plan_only=args.plan, bundle=args.bundle)
         return 0
     except (Exception, KeyboardInterrupt) as error:
-        print(f'Update stopped: {error}', file=sys.stderr); return 1
+        report_error(user, error); return 1
 
 
 if __name__ == '__main__': raise SystemExit(main())

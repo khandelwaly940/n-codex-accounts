@@ -36,7 +36,7 @@ class UpdateTests(unittest.TestCase):
         self.environment = patch.dict(os.environ, {'CODEX_REAL_BINARY': str(self.binary)})
         self.environment.start(); self.addCleanup(self.environment.stop)
         self.payload = self.user/'payload'; shutil.copytree(test_install.ROOT/'setup', self.payload/'setup')
-        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.1', 'cli_versions': ['0.158.0', '0.159.0']}))
+        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.2', 'cli_versions': ['0.158.0', '0.159.0']}))
         self.shell = self.user/'.zshrc'
         self.shell.write_text(f'''# my settings
 export MY_SETTING=yes
@@ -131,6 +131,45 @@ codex() {{
         with patch('builtins.input', return_value='n'), contextlib.redirect_stdout(io.StringIO()):
             self.assertFalse(updater.update(self.user, bundle=self.payload))
         self.assertEqual(before, updater.fingerprint([self.shell, self.canonical, self.secondary]))
+
+    def test_details_are_concise_and_never_approve(self):
+        manifest = json.loads((self.payload/'release.json').read_text())
+        manifest['summary'] = ['Shorter update screen.', 'Supports both reviewed CLI versions.']
+        (self.payload/'release.json').write_text(json.dumps(manifest))
+        before = updater.fingerprint([self.shell, self.canonical, self.secondary])
+        output = io.StringIO()
+        with patch('builtins.input', side_effect=['d', 'n']) as prompt, contextlib.redirect_stdout(output):
+            self.assertFalse(updater.update(self.user, bundle=self.payload))
+        text = output.getvalue()
+        self.assertIn('Shorter update screen.', text)
+        self.assertIn('Update details', text)
+        self.assertIn('Credentials: preserved; no login or logout.', text)
+        self.assertNotIn(str(self.canonical), text)
+        self.assertLess(len(text.splitlines()), 20)
+        self.assertEqual(prompt.call_count, 2)
+        self.assertEqual(before, updater.fingerprint([self.shell, self.canonical, self.secondary]))
+
+    def test_details_then_approval_runs_update_once(self):
+        with patch('builtins.input', side_effect=['d', 'yes']), patch.object(updater, 'apply', return_value=self.user/'backup') as apply, contextlib.redirect_stdout(io.StringIO()):
+            self.assertTrue(updater.update(self.user, bundle=self.payload))
+        apply.assert_called_once()
+        self.assert_auth_untouched()
+
+    def test_inspection_plan_keeps_paths_and_never_prompts(self):
+        output = io.StringIO()
+        with patch('builtins.input') as prompt, contextlib.redirect_stdout(output):
+            self.assertFalse(updater.update(self.user, bundle=self.payload, plan_only=True))
+        prompt.assert_not_called()
+        self.assertIn(str(self.canonical), output.getvalue())
+
+    def test_failure_detail_is_private_and_screen_is_bounded(self):
+        message = 'Conflict: ' + 'x' * 1000
+        output = io.StringIO()
+        with contextlib.redirect_stderr(output): updater.report_error(self.user, ValueError(message))
+        self.assertLess(len(output.getvalue().splitlines()[0]), 260)
+        log = updater.runtime(self.user)/'update-error.json'
+        self.assertEqual(json.loads(log.read_text())['error'], message)
+        self.assertEqual(log.stat().st_mode & 0o777, 0o600)
 
     def test_registry_based_legacy_keeps_custom_labels(self):
         path = self.user/'.config/dual-codex/accounts.json'
