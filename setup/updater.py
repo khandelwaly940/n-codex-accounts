@@ -19,7 +19,7 @@ import tarfile
 import tempfile
 import urllib.request
 
-VERSION = '0.2.3'
+VERSION = '0.2.4'
 REPO = 'khandelwaly940/n-codex-accounts'
 PARTS = ('sessions', 'archived_sessions', 'attachments', 'thread-writer-locks')
 SOURCE = Path(__file__).resolve().parent
