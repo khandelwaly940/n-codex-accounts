@@ -12,8 +12,8 @@ out = Path(sys.argv[1]).resolve(); out.mkdir(parents=True, exist_ok=True)
 files = [ROOT/n for n in ('README.md', 'LICENSE', 'install.sh', '.gitignore')]
 files += sorted((ROOT/'setup').glob('*.py')) + sorted((ROOT/'setup').glob('*.zsh'))
 assert all(p.is_file() and not p.is_symlink() for p in files)
-manifest = {'version': '0.2.5', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1'],
-            'summary': ['Supports Codex CLI 0.160.1.',
+manifest = {'version': '0.2.6', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0'],
+            'summary': ['Supports Codex CLI 0.161.0.',
                         'Earlier reviewed CLI versions and shared-history checks remain supported.'],
             'files': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}
 archive = out/'n-codex-accounts.tar.gz'

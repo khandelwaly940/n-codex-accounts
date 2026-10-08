@@ -168,7 +168,7 @@ class InstallTests(unittest.TestCase):
         source.write_text(source.read_text().replace('Path.home()', f'Path({str(self.root)!r})'))
         files = {str(path.relative_to(archive_root)): hashlib.sha256(path.read_bytes()).hexdigest()
                  for path in (archive_root / 'setup').iterdir() if path.is_file()}
-        (archive_root / 'release.json').write_text(json.dumps({'version': '0.2.5', 'files': files}))
+        (archive_root / 'release.json').write_text(json.dumps({'version': '0.2.6', 'files': files}))
         archive = self.root / 'n-codex-accounts.tar.gz'
         with tarfile.open(archive, 'w:gz') as bundle:
             for name in sorted(files):
@@ -194,12 +194,12 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((self.root / '.local/share/n-codex-accounts/bin/accounts').is_file())
         self.assertIn(installer.START, (self.root / '.zshrc').read_text())
-        for version in ('0.159.0', '0.159.2', '0.160.0', '0.160.1'):
+        for version in ('0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0'):
             self.binary.write_text(f'#!/bin/sh\nprintf "codex-cli {version}\\n"\n')
             result = subprocess.run(['zsh', str(bootstrap), '--skip-login', '--cli', str(self.binary)],
                                     env=environment, capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual((self.root / '.local/share/n-codex-accounts/VERSION').read_text().strip(), '0.2.5')
+            self.assertEqual((self.root / '.local/share/n-codex-accounts/VERSION').read_text().strip(), '0.2.6')
 
 
 if __name__ == '__main__':
