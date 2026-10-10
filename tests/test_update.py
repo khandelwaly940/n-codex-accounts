@@ -36,7 +36,7 @@ class UpdateTests(unittest.TestCase):
         self.environment = patch.dict(os.environ, {'CODEX_REAL_BINARY': str(self.binary)})
         self.environment.start(); self.addCleanup(self.environment.stop)
         self.payload = self.user/'payload'; shutil.copytree(test_install.ROOT/'setup', self.payload/'setup')
-        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.6', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0']}))
+        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.7', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0', '0.162.1']}))
         self.shell = self.user/'.zshrc'
         self.shell.write_text(f'''# my settings
 export MY_SETTING=yes
@@ -83,7 +83,7 @@ codex() {{
         self.assertEqual(before, updater.fingerprint([self.shell, self.canonical, self.secondary]))
 
     def test_plan_accepts_new_cli_without_touching_credentials(self):
-        self.binary.write_text('#!/bin/sh\nprintf "codex-cli 0.161.0\\n"\n')
+        self.binary.write_text('#!/bin/sh\nprintf "codex-cli 0.162.1\\n"\n')
         proposed = self.plan()
         self.assertEqual(proposed['origin'], 'legacy two-account')
         self.assert_auth_untouched()

@@ -13,14 +13,14 @@ An independent community tool. Windows, WSL, and Linux are not supported.
 ### 1. Check what you need
 
 - **Python 3.11+**
-- **Codex CLI 0.161.0** on your `PATH` (0.158.0, 0.159.0, 0.159.2, 0.160.0, and 0.160.1 also supported)
+- **Codex CLI 0.162.1** on your `PATH` (0.158.0, 0.159.0, 0.159.2, 0.160.0, 0.160.1, and 0.161.0 also supported)
 - A ChatGPT account with Codex access
 - **VS Code 1.96.2+**, only if you want editor support
 
 Don't have the CLI yet? Install the reviewed version:
 
 ```sh
-npm install -g @openai/codex@0.161.0
+npm install -g @openai/codex@0.162.1
 ```
 
 Already using a newer CLI? Check compatibility before changing versions; don't downgrade an existing installation blindly.
@@ -127,14 +127,14 @@ Normal Codex approvals remain enabled. Other CLI subcommands work as usual.
 
 ## Compatibility
 
-CLI baseline updated on **8 October 2026**; extension review from 27 September 2026:
+CLI baseline updated on **10 October 2026**; extension review from 27 September 2026:
 
 | Component | Version |
 | --- | --- |
-| Codex CLI | **0.161.0** recommended; **0.158.0**, **0.159.0**, **0.159.2**, **0.160.0**, **0.160.1** supported |
+| Codex CLI | **0.162.1** recommended; **0.158.0**, **0.159.0**, **0.159.2**, **0.160.0**, **0.160.1**, **0.161.0** supported |
 | VS Code extension `openai.chatgpt` | **26.917.62051** |
 | Codex bundled with that extension | **0.155.0-alpha.16.3** |
-| This installer | **0.2.6** |
+| This installer | **0.2.7** |
 
 **Offline regression tests cover** installation, repeat installation, account routing, migration, shared-history checks, failure recovery, and daily notices. The extension package and bundled command interface were inspected separately. Real login, model requests, and VS Code chats were not used to certify this release. After installing, try a simple request per account and a sequential cross-account chat resume. Intel macOS has not been tested on Intel hardware.
 
@@ -178,7 +178,7 @@ You can inspect [install.sh](install.sh) and [setup/install.py](setup/install.py
 
 The installer requires file-based ChatGPT credentials. Keychain-only logins and existing custom account switchers need separate review; it refuses automatic conversion. It installs helpers under `~/.local/share/n-codex-accounts`, backs up `.zshrc` and previous helper files, and adds one managed shell block. It doesn't install system prerequisites or silently update Codex. Re-running it refreshes helpers while preserving account credentials and registry entries.
 
-Codex can update its background daemon independently of your terminal CLI. CLI 0.161.0 enables `api_key_model_discovery` by default; an older client can therefore show a feature-settings mismatch against the newer daemon. Use **Run without daemon this time** to continue without restarting other clients. Update the terminal CLI to the reviewed version, and retry; different project overrides or persisted daemon settings can still require inspection. Do not accept a daemon restart while it has active work. No relogin is indicated by this feature-settings warning.
+Codex can update its background daemon independently of your terminal CLI. CLI **0.162.1** fixes startup failures caused by differences between daemon feature settings and CLI defaults; only explicit command-line feature overrides trigger that compatibility check. Update the terminal CLI to the reviewed version. If an explicit override still conflicts, use **Run without daemon this time** or `--no-daemon` without restarting other clients. Do not accept a daemon restart while it has active work. No relogin is indicated by this feature-settings warning.
 
 Before upgrading, finish work and close affected CLI/editor processes and daemons. Review CLI and extension versions separately: npm does not update the extension's bundled binary. With a reviewed CLI installed, `app-server daemon update --from-cli` and the selected account's `CODEX_HOME` can pin that daemon to the CLI. This may restart work. Disable extension auto-updates if you want to stay on reviewed versions.
 
