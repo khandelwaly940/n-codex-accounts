@@ -13,14 +13,14 @@ An independent community tool. Windows, WSL, and Linux are not supported.
 ### 1. Check what you need
 
 - **Python 3.11+**
-- **Codex CLI 0.162.1** on your `PATH` (0.158.0, 0.159.0, 0.159.2, 0.160.0, 0.160.1, and 0.161.0 also supported)
+- **Codex CLI 0.163.0** on your `PATH` (0.158.0, 0.159.0, 0.159.2, 0.160.0, 0.160.1, 0.161.0, and 0.162.1 also supported)
 - A ChatGPT account with Codex access
 - **VS Code 1.96.2+**, only if you want editor support
 
 Don't have the CLI yet? Install the reviewed version:
 
 ```sh
-npm install -g @openai/codex@0.162.1
+npm install -g @openai/codex@0.163.0
 ```
 
 Already using a newer CLI? Check compatibility before changing versions; don't downgrade an existing installation blindly.
@@ -92,7 +92,7 @@ ncodex rollback         # Guarded helper/config rollback where safe
 
 The launch notice checks **this helper package**, not new OpenAI Codex CLI releases. It appears only in an interactive terminal, at most once per local day, when GitHub is reachable and a newer helper release exists. If today's check already ran, use `ncodex update --check` to check again now.
 
-A helper-only update can leave existing chats running. Don't start additional launches during installation. History migrations require affected writers to stop. Codex CLI and editor extensions are not upgraded by this command. Public launches use normal approvals; this is shown in the migration plan when moving from an older setup.
+A helper-only update can leave existing chats running. Don't start additional launches during installation. History migrations require affected writers to stop. Codex CLI and editor extensions are not upgraded by this command. Public launchers do not force YOLO; the migration plan explains this when moving from an older setup.
 
 Backups and an interrupted-update journal live under `~/.local/share/n-codex-accounts`. Completed history migrations are **not automatically rolled back later**, because that could hide newer chats. Original folders are retained for reviewed recovery. If the shell helper is unavailable after interruption, the downloaded bootstrap accepts `--rollback` for eligible helper/config recovery. No rollback replaces credentials or databases.
 
@@ -123,18 +123,18 @@ codex resume --all
 
 Choose the earlier conversation. Never write to the same chat from two accounts at once. The selected account still needs access to the models and tools used by that chat.
 
-Normal Codex approvals remain enabled. Other CLI subcommands work as usual.
+The public launcher does not add YOLO flags. Codex configuration and saved-thread permissions apply; CLI 0.163.0 restores saved permissions on resume while honoring explicit overrides and current managed policy. Check the permission mode when resuming an older chat. Other CLI subcommands work as usual.
 
 ## Compatibility
 
-CLI baseline updated on **10 October 2026**; extension review from 27 September 2026:
+CLI baseline updated on **18 October 2026**; extension review from 27 September 2026:
 
 | Component | Version |
 | --- | --- |
-| Codex CLI | **0.162.1** recommended; **0.158.0**, **0.159.0**, **0.159.2**, **0.160.0**, **0.160.1**, **0.161.0** supported |
+| Codex CLI | **0.163.0** recommended; **0.158.0**, **0.159.0**, **0.159.2**, **0.160.0**, **0.160.1**, **0.161.0**, **0.162.1** supported |
 | VS Code extension `openai.chatgpt` | **26.917.62051** |
 | Codex bundled with that extension | **0.155.0-alpha.16.3** |
-| This installer | **0.2.7** |
+| This installer | **0.2.8** |
 
 **Offline regression tests cover** installation, repeat installation, account routing, migration, shared-history checks, failure recovery, and daily notices. The extension package and bundled command interface were inspected separately. Real login, model requests, and VS Code chats were not used to certify this release. After installing, try a simple request per account and a sequential cross-account chat resume. Intel macOS has not been tested on Intel hardware.
 

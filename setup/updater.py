@@ -19,7 +19,7 @@ import tarfile
 import tempfile
 import urllib.request
 
-VERSION = '0.2.7'
+VERSION = '0.2.8'
 REPO = 'khandelwaly940/n-codex-accounts'
 PARTS = ('sessions', 'archived_sessions', 'attachments', 'thread-writer-locks')
 SOURCE = Path(__file__).resolve().parent
@@ -446,7 +446,7 @@ def show_details(proposed, manifest, *, paths=False):
           'History: keep the existing shared store.')
     print('Credentials: preserved; no login or logout.')
     print('CLI: ' + ', '.join(manifest['cli_versions']) + ' supported; CLI and extension are not upgraded.')
-    print('Launches: normal Codex approvals. Backups: ~/.local/share/n-codex-accounts/update-backups/')
+    print('Launches: Codex config and saved-thread permissions; no forced YOLO. Backups: ~/.local/share/n-codex-accounts/update-backups/')
     print('Wait until installation finishes before starting another account launch.')
     if paths:
         print('Detected setup: ' + proposed['origin'])
@@ -484,7 +484,7 @@ def update(user, *, check=False, plan_only=False, bundle=None):
               'Updates account helpers; preserves credentials and history.')
         print('Close affected Codex, editor, and daemon processes before updating.' if proposed['layout'] or proposed['origin']!='public' else
               'Existing chats may stay open. Wait before starting another account launch.')
-        if proposed['origin'] != 'public': print('Migrated launches use normal Codex approvals.')
+        if proposed['origin'] != 'public': print('Migrated launchers do not force YOLO; Codex config and saved-thread permissions apply.')
         if plan_only:
             show_details(proposed, manifest, paths=True)
             return False
