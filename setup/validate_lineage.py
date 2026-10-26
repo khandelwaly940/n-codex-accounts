@@ -2,23 +2,83 @@
 """Validate physical Codex rollout ancestry, including same-chat continuations."""
 from __future__ import annotations
 import argparse
+from contextlib import contextmanager
 from collections import defaultdict
 import json
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
+
+try:
+    from compression.zstd import open as zstd_open
+except ImportError:  # Python 3.11-3.13 can use the optional zstd executable.
+    zstd_open = None
 
 UUID = r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}'
 
 
+def logical_path(path):
+    return path.with_suffix('') if path.name.endswith('.jsonl.zst') else path
+
+
+@contextmanager
+def rollout_reader(path):
+    plain = logical_path(path)
+    compressed = plain.with_suffix('.jsonl.zst')
+    # Codex may compress or restore a rollout between discovery and opening it.
+    for attempt in range(3):
+        selected = plain if plain.exists() else compressed
+        try:
+            handle = selected.open('rb')
+            break
+        except FileNotFoundError:
+            if attempt == 2: raise
+    if selected == plain:
+        with handle: yield handle, False
+        return
+    handle.close()
+    if zstd_open is not None:
+        with zstd_open(selected, 'rb') as decoded: yield decoded, True
+        return
+    executable = shutil.which('zstd')
+    if not executable:
+        raise ValueError('Compressed history requires Python 3.14+ with zstd support or the zstd command (brew install zstd)')
+    process = subprocess.Popen([executable, '-q', '-d', '-c', '--', str(selected)],
+                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    try:
+        yield process.stdout, True
+    finally:
+        process.stdout.close()
+        if process.poll() is None: process.terminate()
+        try: process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill(); process.wait()
+
+
 def physical_id(path, session_id):
+    path = logical_path(path)
     match = re.search(r'(' + UUID + r')(?:_(' + UUID + r'))?$', path.stem)
     return (match.group(2) or match.group(1)) if match else session_id
 
 
 def prefix_record(path, end):
-    with path.open('rb') as handle:
-        if end < 1 or end > path.stat().st_size:
+    with rollout_reader(path) as (handle, compressed):
+        if compressed:
+            # Offsets refer to JSONL bytes, not compressed file sizes. Keep only
+            # the final record in memory, without materializing history on disk.
+            remaining = end; last = b''
+            while remaining > 0:
+                block = handle.read(min(remaining, 65536))
+                if not block: raise ValueError('history prefix extends outside source rollout')
+                remaining -= len(block)
+                if remaining == 0:
+                    if not block.endswith(b'\n'): raise ValueError('history prefix does not end at a JSONL boundary')
+                    block = block[:-1]
+                last = (last + block).rsplit(b'\n', 1)[-1]
+            return json.loads(last)
+        if end < 1 or end > handle.seek(0, 2):
             raise ValueError('history prefix extends outside source rollout')
         handle.seek(end - 1)
         if handle.read(1) != b'\n': raise ValueError('history prefix does not end at a JSONL boundary')
@@ -36,10 +96,11 @@ def prefix_record(path, end):
 
 def validate(roots):
     nodes = {}; groups = defaultdict(list); errors = []
-    paths = {p.resolve() for root in roots if root.exists() for p in root.rglob('*.jsonl')}
+    paths = {logical_path(p.resolve()) for root in roots if root.exists()
+             for pattern in ('*.jsonl', '*.jsonl.zst') for p in root.rglob(pattern)}
     for path in sorted(paths):
         try:
-            with path.open(encoding='utf-8') as handle: record = json.loads(handle.readline())
+            with rollout_reader(path) as (handle, _): record = json.loads(handle.readline())
             meta = record.get('payload', {})
             session = meta.get('id') or meta.get('session_id')
             if record.get('type') != 'session_meta' or not isinstance(session, str) or not session:

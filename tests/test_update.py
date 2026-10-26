@@ -13,6 +13,7 @@ import unittest
 from unittest.mock import patch
 
 import test_install
+import test_lineage
 import test_safety
 
 updater = test_install.module('updater')
@@ -36,7 +37,7 @@ class UpdateTests(unittest.TestCase):
         self.environment = patch.dict(os.environ, {'CODEX_REAL_BINARY': str(self.binary)})
         self.environment.start(); self.addCleanup(self.environment.stop)
         self.payload = self.user/'payload'; shutil.copytree(test_install.ROOT/'setup', self.payload/'setup')
-        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.8', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0', '0.162.1', '0.163.0']}))
+        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.9', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0', '0.162.1', '0.163.0', '0.164.0']}))
         self.shell = self.user/'.zshrc'
         self.shell.write_text(f'''# my settings
 export MY_SETTING=yes
@@ -83,9 +84,22 @@ codex() {{
         self.assertEqual(before, updater.fingerprint([self.shell, self.canonical, self.secondary]))
 
     def test_plan_accepts_new_cli_without_touching_credentials(self):
-        self.binary.write_text('#!/bin/sh\nprintf "codex-cli 0.163.0\\n"\n')
+        self.binary.write_text('#!/bin/sh\nprintf "codex-cli 0.164.0\\n"\n')
         proposed = self.plan()
         self.assertEqual(proposed['origin'], 'legacy two-account')
+        self.assert_auth_untouched()
+
+    def test_migrate_compressed_history_preserves_bytes_and_auth(self):
+        self.rollout(self.canonical, 'one')
+        self.rollout(self.secondary, 'two', 'one')
+        compressed = test_lineage.LineageTests.compress(self, self.canonical/'sessions/one.jsonl')
+        original = compressed.read_bytes()
+        proposed = self.plan()
+        with patch.object(updater, 'idle'):
+            updater.apply(self.user, self.payload, self.stage, proposed)
+        self.assertEqual((self.canonical/'sessions/one.jsonl.zst').read_bytes(), original)
+        self.assertFalse((self.canonical/'sessions/one.jsonl').exists())
+        self.assertTrue((self.canonical/'sessions/two.jsonl').is_file())
         self.assert_auth_untouched()
 
     def test_migrate_separate_history_preserves_originals_and_auth(self):
