@@ -18,8 +18,9 @@ import sys
 import tarfile
 import tempfile
 import urllib.request
+import urllib.error
 
-VERSION = '0.2.10'
+VERSION = '0.2.11'
 REPO = 'khandelwaly940/n-codex-accounts'
 PARTS = ('sessions', 'archived_sessions', 'attachments', 'thread-writer-locks')
 SOURCE = Path(__file__).resolve().parent
@@ -60,13 +61,22 @@ def version(value):
 
 
 def latest():
-    request = urllib.request.Request(f'https://api.github.com/repos/{REPO}/releases/latest',
+    # The public release redirect does not consume GitHub's unauthenticated
+    # REST API allowance, which is shared by everyone behind the same IP.
+    base = f'https://github.com/{REPO}/releases/'
+    request = urllib.request.Request(base + 'latest', method='HEAD',
                                      headers={'User-Agent': 'n-codex-accounts-updater'})
-    with urllib.request.urlopen(request, timeout=3) as response:
-        value = json.loads(response.read(1024 * 1024))
-    version(value['tag_name'])
-    if value.get('draft') or value.get('prerelease'): raise ValueError('Not a stable release')
-    return {'tag': value['tag_name'], 'notes': str(value.get('body', ''))[:10000]}
+    try:
+        with urllib.request.urlopen(request, timeout=3) as response:
+            location = response.geturl()
+    except urllib.error.HTTPError as error:
+        error.close()
+        if error.code in (403, 429):
+            raise ValueError(f'GitHub temporarily blocked the release check (HTTP {error.code}). Retry later; setup unchanged.') from error
+        raise
+    match = re.fullmatch(re.escape(base + 'tag/') + r'(v\d+\.\d+\.\d+)', location)
+    if not match: raise ValueError('GitHub did not resolve a stable release for this repository')
+    return {'tag': match.group(1), 'notes': ''}
 
 
 def download(tag, directory):

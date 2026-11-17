@@ -10,17 +10,30 @@ import sys
 import tarfile
 import tempfile
 import urllib.request
+import urllib.error
+
+
+def latest_tag():
+    base = 'https://github.com/khandelwaly940/n-codex-accounts/releases/'
+    request = urllib.request.Request(base + 'latest', method='HEAD',
+                                     headers={'User-Agent': 'n-codex-bootstrap'})
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            location = response.geturl()
+    except urllib.error.HTTPError as error:
+        error.close()
+        if error.code in (403, 429):
+            raise ValueError(f'GitHub temporarily blocked the release check (HTTP {error.code}). Retry later; setup unchanged.') from error
+        raise
+    match = re.fullmatch(re.escape(base + 'tag/') + r'(v\d+\.\d+\.\d+)', location)
+    if not match: raise ValueError('GitHub did not resolve a stable release for this repository')
+    return match.group(1)
 
 
 def main():
     if sys.platform != 'darwin' or sys.version_info < (3, 11):
         raise ValueError('Requires macOS and Python 3.11+. Run: python3 ncodex-bootstrap.command')
-    base = 'https://api.github.com/repos/khandelwaly940/n-codex-accounts/releases/latest'
-    with urllib.request.urlopen(urllib.request.Request(base, headers={'User-Agent': 'n-codex-bootstrap'}), timeout=10) as r:
-        release = json.load(r)
-    tag = release['tag_name']
-    if not re.fullmatch(r'v\d+\.\d+\.\d+', tag) or release.get('prerelease') or release.get('draft'):
-        raise ValueError('No stable release available')
+    tag = latest_tag()
     url = f'https://github.com/khandelwaly940/n-codex-accounts/releases/download/{tag}/'
     with urllib.request.urlopen(url+'SHA256SUMS', timeout=10) as r:
         lines = r.read(16384).decode().splitlines()

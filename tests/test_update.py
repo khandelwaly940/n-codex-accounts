@@ -37,7 +37,7 @@ class UpdateTests(unittest.TestCase):
         self.environment = patch.dict(os.environ, {'CODEX_REAL_BINARY': str(self.binary)})
         self.environment.start(); self.addCleanup(self.environment.stop)
         self.payload = self.user/'payload'; shutil.copytree(test_install.ROOT/'setup', self.payload/'setup')
-        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.10', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0', '0.162.1', '0.163.0', '0.164.0', '0.169.0']}))
+        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.11', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0', '0.162.1', '0.163.0', '0.164.0', '0.169.0']}))
         self.shell = self.user/'.zshrc'
         self.shell.write_text(f'''# my settings
 export MY_SETTING=yes
