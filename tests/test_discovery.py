@@ -19,7 +19,7 @@ spec = importlib.util.spec_from_loader(loader.name, loader)
 bootstrap = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bootstrap)
 BASE = 'https://github.com/khandelwaly940/n-codex-accounts/releases/'
-TAG = 'v0.2.11'
+TAG = 'v0.2.12'
 
 
 def redirect(location):
@@ -62,7 +62,7 @@ class DiscoveryTests(unittest.TestCase):
         locations = ['http://github.com/khandelwaly940/n-codex-accounts/releases/tag/'+TAG,
                      'https://example.com/releases/tag/'+TAG,
                      'https://github.com/other/repo/releases/tag/'+TAG,
-                     BASE+'tag/v0.2.11-alpha', BASE+'tag/'+TAG+'?other=1', BASE+'latest']
+                     BASE+'tag/v0.2.12-alpha', BASE+'tag/'+TAG+'?other=1', BASE+'latest']
         for function in (updater.latest, bootstrap.latest_tag):
             for location in locations:
                 with self.subTest(function=function.__name__, location=location), patch.object(updater.urllib.request, 'urlopen', return_value=redirect(location)), self.assertRaisesRegex(ValueError, 'stable release'):

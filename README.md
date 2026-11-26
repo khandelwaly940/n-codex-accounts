@@ -13,14 +13,14 @@ An independent community tool. Windows, WSL, and Linux are not supported.
 ### 1. Check what you need
 
 - **Python 3.11+** (compressed chats also need Python 3.14+ with zstd support, or the `zstd` command from `brew install zstd`)
-- **Codex CLI 0.169.0** on your `PATH` (0.158.0, 0.159.0, 0.159.2, 0.160.0, 0.160.1, 0.161.0, 0.162.1, 0.163.0, and 0.164.0 also supported)
+- **Codex CLI 0.172.0** on your `PATH` (0.158.0, 0.159.0, 0.159.2, 0.160.0, 0.160.1, 0.161.0, 0.162.1, 0.163.0, 0.164.0, and 0.169.0 also supported)
 - A ChatGPT account with Codex access
 - **VS Code 1.96.2+**, only if you want editor support
 
 Don't have the CLI yet? Install the reviewed version:
 
 ```sh
-npm install -g @openai/codex@0.169.0
+npm install -g @openai/codex@0.172.0
 ```
 
 Already using a newer CLI? Check compatibility before changing versions; don't downgrade an existing installation blindly.
@@ -131,14 +131,14 @@ The public launcher does not add YOLO flags. Codex configuration and saved-threa
 
 ## Compatibility
 
-CLI baseline updated on **16 November 2026**; extension review from 27 September 2026:
+CLI baseline updated on **26 November 2026**; extension review from 27 September 2026:
 
 | Component | Version |
 | --- | --- |
-| Codex CLI | **0.169.0** recommended; **0.158.0**, **0.159.0**, **0.159.2**, **0.160.0**, **0.160.1**, **0.161.0**, **0.162.1**, **0.163.0**, **0.164.0** supported |
+| Codex CLI | **0.172.0** recommended; **0.158.0**, **0.159.0**, **0.159.2**, **0.160.0**, **0.160.1**, **0.161.0**, **0.162.1**, **0.163.0**, **0.164.0**, **0.169.0** supported |
 | VS Code extension `openai.chatgpt` | **26.917.62051** |
 | Codex bundled with that extension | **0.155.0-alpha.16.3** |
-| This installer | **0.2.11** |
+| This installer | **0.2.12** |
 
 **Offline regression tests cover** installation, repeat installation, account routing, migration, shared-history checks, failure recovery, and daily notices. The extension package and bundled command interface were inspected separately. Real login, model requests, and VS Code chats were not used to certify this release. After installing, try a simple request per account and a sequential cross-account chat resume. Intel macOS has not been tested on Intel hardware.
 

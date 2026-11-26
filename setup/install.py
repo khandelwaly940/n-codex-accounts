@@ -14,10 +14,10 @@ import sys
 import tempfile
 import tomllib
 
-CLI_VERSION = '0.169.0'
-SUPPORTED_CLI_VERSIONS = ('0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0', '0.162.1', '0.163.0', '0.164.0', '0.169.0')
+CLI_VERSION = '0.172.0'
+SUPPORTED_CLI_VERSIONS = ('0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0', '0.162.1', '0.163.0', '0.164.0', '0.169.0', '0.172.0')
 EXTENSION_VERSION = '26.917.62051'
-VERSION = '0.2.11'
+VERSION = '0.2.12'
 START = '# BEGIN N_CODEX_ACCOUNTS'
 END = '# END N_CODEX_ACCOUNTS'
 SOURCE = Path(__file__).resolve().parent

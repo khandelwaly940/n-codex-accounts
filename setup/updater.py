@@ -20,7 +20,7 @@ import tempfile
 import urllib.request
 import urllib.error
 
-VERSION = '0.2.11'
+VERSION = '0.2.12'
 REPO = 'khandelwaly940/n-codex-accounts'
 PARTS = ('sessions', 'archived_sessions', 'attachments', 'thread-writer-locks')
 SOURCE = Path(__file__).resolve().parent
