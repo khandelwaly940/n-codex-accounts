@@ -37,7 +37,7 @@ class UpdateTests(unittest.TestCase):
         self.environment = patch.dict(os.environ, {'CODEX_REAL_BINARY': str(self.binary)})
         self.environment.start(); self.addCleanup(self.environment.stop)
         self.payload = self.user/'payload'; shutil.copytree(test_install.ROOT/'setup', self.payload/'setup')
-        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.12', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0', '0.162.1', '0.163.0', '0.164.0', '0.169.0', '0.172.0']}))
+        (self.payload/'release.json').write_text(json.dumps({'version': '0.2.13', 'cli_versions': ['0.158.0', '0.159.0', '0.159.2', '0.160.0', '0.160.1', '0.161.0', '0.162.1', '0.163.0', '0.164.0', '0.169.0', '0.172.0']}))
         self.shell = self.user/'.zshrc'
         self.shell.write_text(f'''# my settings
 export MY_SETTING=yes
@@ -87,6 +87,45 @@ codex() {{
         self.binary.write_text('#!/bin/sh\nprintf "codex-cli 0.172.0\\n"\n')
         proposed = self.plan()
         self.assertEqual(proposed['origin'], 'legacy two-account')
+        self.assert_auth_untouched()
+
+    def make_public_layout(self):
+        self.shell.write_text('# BEGIN N_CODEX_ACCOUNTS\nsource "$HOME/.local/share/n-codex-accounts/shell.zsh"\n# END N_CODEX_ACCOUNTS\n')
+        updater.write(self.user/'.config/n-codex-accounts/accounts.json',
+                      {'version':1,'accounts':{'primary':{'home':str(self.canonical)},'work':{'home':str(self.secondary)}}})
+        for part in updater.PARTS:
+            (self.secondary/part).rmdir()
+            (self.secondary/part).symlink_to(self.canonical/part,target_is_directory=True)
+
+    def test_legacy_plan_uses_downloaded_validator(self):
+        outdated=self.user/'outdated';outdated.mkdir()
+        (outdated/'validate_lineage.py').write_text('raise SystemExit("old validator must not run")')
+        with patch.object(updater,'SOURCE',outdated):
+            self.assertTrue(self.plan()['layout'])
+        self.assert_auth_untouched()
+
+    def test_public_plan_uses_downloaded_validator(self):
+        self.make_public_layout();outdated=self.user/'outdated';outdated.mkdir()
+        (outdated/'validate_lineage.py').write_text('raise SystemExit("old validator must not run")')
+        with patch.object(updater,'SOURCE',outdated):
+            self.assertFalse(self.plan()['layout'])
+        self.assert_auth_untouched()
+
+    def test_helper_update_retains_empty_rollout_and_auth(self):
+        self.make_public_layout();empty=self.rollout(self.canonical,test_lineage.A);empty.write_bytes(b'')
+        before=(empty.read_bytes(),empty.stat().st_ino,empty.stat().st_mtime_ns)
+        proposed=self.plan()
+        with patch.object(updater,'idle'):
+            updater.apply(self.user,self.payload,self.stage,proposed)
+        self.assertEqual((empty.read_bytes(),empty.stat().st_ino,empty.stat().st_mtime_ns),before)
+        self.assert_auth_untouched()
+
+    def test_referenced_empty_rollout_stops_update_plan(self):
+        self.make_public_layout();empty=self.rollout(self.canonical,test_lineage.A);empty.write_bytes(b'')
+        self.rollout(self.canonical,test_lineage.B,test_lineage.A)
+        before=updater.fingerprint([self.canonical,self.secondary,self.shell])
+        with self.assertRaises(subprocess.CalledProcessError):self.plan()
+        self.assertEqual(updater.fingerprint([self.canonical,self.secondary,self.shell]),before)
         self.assert_auth_untouched()
 
     def test_migrate_compressed_history_preserves_bytes_and_auth(self):

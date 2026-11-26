@@ -5,6 +5,7 @@ import argparse
 from contextlib import contextmanager
 from collections import defaultdict
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -36,9 +37,14 @@ def rollout_reader(path):
         except FileNotFoundError:
             if attempt == 2: raise
     if selected == plain:
-        with handle: yield handle, False
-        return
-    handle.close()
+        with handle:
+            if os.fstat(handle.fileno()).st_size or not compressed.exists():
+                yield handle, False
+                return
+        # An empty materialization must not hide an existing compressed rollout.
+        selected = compressed
+    else:
+        handle.close()
     if zstd_open is not None:
         with zstd_open(selected, 'rb') as decoded: yield decoded, True
         return
@@ -94,13 +100,21 @@ def prefix_record(path, end):
         return json.loads(b''.join(reversed(chunks)))
 
 
-def validate(roots):
-    nodes = {}; groups = defaultdict(list); errors = []
+def validate(roots, *, ignored_empty=None):
+    nodes = {}; groups = defaultdict(list); errors = []; empty = {}
     paths = {logical_path(p.resolve()) for root in roots if root.exists()
              for pattern in ('*.jsonl', '*.jsonl.zst') for p in root.rglob(pattern)}
     for path in sorted(paths):
         try:
-            with rollout_reader(path) as (handle, _): record = json.loads(handle.readline())
+            with rollout_reader(path) as (handle, compressed):
+                first = handle.readline()
+                node = physical_id(path, None)
+                if not first and not compressed and node is not None:
+                    stat = os.fstat(handle.fileno())
+                    if stat.st_size == 0:
+                        empty[path] = (node, (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns))
+                        continue
+                record = json.loads(first)
             meta = record.get('payload', {})
             session = meta.get('id') or meta.get('session_id')
             if record.get('type') != 'session_meta' or not isinstance(session, str) or not session:
@@ -111,6 +125,30 @@ def validate(roots):
             nodes[node] = (path, meta, record.get('ordinal'))
             groups[session].append(node)
         except Exception as exc: errors.append(f'cannot validate {path}: {exc}')
+
+    empty_ids = {node.lower() for node, _ in empty.values()}
+    referenced_empty = set()
+    for node, (path, meta, _) in nodes.items():
+        base = meta.get('history_base')
+        references = [meta.get('forked_from_id')]
+        if isinstance(base, dict): references.append(base.get('thread_id'))
+        for parent in references:
+            if isinstance(parent, str) and parent.lower() in empty_ids:
+                referenced_empty.add(parent.lower())
+                errors.append(f'{node}: empty source rollout {parent} is referenced by {path}; files retained, history needs review')
+    for path, (node, snapshot) in empty.items():
+        duplicate = next((key for key in nodes if key.lower() == node.lower()), None)
+        if duplicate is not None:
+            errors.append(f'duplicate physical rollout id {node}: empty {path} and {nodes[duplicate][0]}')
+        try:
+            stat = path.stat()
+            current = (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)
+            if current != snapshot or path.with_suffix('.jsonl.zst').exists():
+                raise ValueError('empty rollout changed during validation; retry when its writer is idle')
+        except (OSError, ValueError) as exc:
+            errors.append(f'cannot validate {path}: {exc}')
+        if ignored_empty is not None and node.lower() not in referenced_empty and duplicate is None:
+            ignored_empty.append(path)
 
     parents = {}
     for node, (path, meta, ordinal) in nodes.items():
@@ -153,13 +191,15 @@ def validate(roots):
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('roots', nargs='+', type=Path)
-    args = parser.parse_args(); nodes, groups, errors = validate(args.roots)
+    args = parser.parse_args(); ignored_empty = []
+    nodes, groups, errors = validate(args.roots, ignored_empty=ignored_empty)
     if errors:
         print('Codex rollout lineage validation FAILED', file=sys.stderr)
         for error in errors: print('- ' + error, file=sys.stderr)
         return 1
     paginated = sum(meta.get('history_mode') == 'paginated' for _, meta, _ in nodes.values())
-    print(f'Codex rollout lineage validation passed: {len(groups)} sessions, {len(nodes)} rollouts, {paginated} paginated')
+    retained = f', {len(ignored_empty)} unreferenced empty rollouts retained' if ignored_empty else ''
+    print(f'Codex rollout lineage validation passed: {len(groups)} sessions, {len(nodes)} rollouts, {paginated} paginated{retained}')
     return 0
 
 

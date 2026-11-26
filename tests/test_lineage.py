@@ -114,4 +114,59 @@ class LineageTests(unittest.TestCase):
         p=self.rollout(A);base=self.base(p,A);self.compress(p)
         self.assertEqual(lineage.prefix_record(p,base['end_byte_offset'])['ordinal'],0)
 
+    def test_unreferenced_empty_rollout_is_retained_without_changes(self):
+        p=self.rollout(A);p.write_bytes(b'');q=self.rollout(B,session=B)
+        before=(p.read_bytes(),p.stat().st_ino,p.stat().st_mtime_ns)
+        ignored=[];nodes,_,errors=lineage.validate([self.root],ignored_empty=ignored)
+        self.assertFalse(errors);self.assertEqual(len(nodes),1);self.assertEqual(ignored,[p.resolve()])
+        self.assertEqual((p.read_bytes(),p.stat().st_ino,p.stat().st_mtime_ns),before)
+    def test_referenced_empty_parent_still_blocks(self):
+        p=self.rollout(A);base=self.base(p,A);p.write_bytes(b'')
+        self.rollout(B,base=base,ordinal=1)
+        self.assertIn('empty source rollout',' '.join(lineage.validate([self.root])[2]))
+        self.assertTrue(p.exists());self.assertEqual(p.stat().st_size,0)
+    def test_legacy_fork_reference_to_empty_rollout_blocks(self):
+        p=self.rollout(A);p.write_bytes(b'');q=self.rollout(B,session=B)
+        record=json.loads(q.read_text());record['payload'].update(history_mode='legacy',forked_from_id=A)
+        q.write_text(json.dumps(record)+'\n')
+        self.assertIn('empty source rollout',' '.join(lineage.validate([self.root])[2]))
+    def test_empty_and_valid_duplicate_physical_ids_are_rejected(self):
+        p=self.rollout(A);q=p.with_name(p.name.replace('12-00-00','13-00-00'))
+        q.write_bytes(p.read_bytes());p.write_bytes(b'')
+        self.assertIn('duplicate physical rollout id',' '.join(lineage.validate([self.root])[2]))
+    def test_nonempty_invalid_headers_are_not_ignored(self):
+        p=self.rollout(A)
+        for value in [b'\n',b' ',b'{',b'not json']:
+            with self.subTest(value=value):
+                p.write_bytes(value);self.assertTrue(lineage.validate([self.root])[2])
+    def test_unidentifiable_empty_filename_still_blocks(self):
+        (self.root/'unknown.jsonl').write_bytes(b'')
+        self.assertTrue(lineage.validate([self.root])[2])
+    def test_empty_rollout_that_changes_during_validation_blocks(self):
+        p=self.rollout(A);original=p.read_bytes();p.write_bytes(b'')
+        q=self.rollout(B,session=B);reader=lineage.rollout_reader
+        def changing(path):
+            if path==q.resolve():p.write_bytes(original)
+            return reader(path)
+        with patch.object(lineage,'rollout_reader',side_effect=changing):
+            self.assertIn('changed during validation',' '.join(lineage.validate([self.root])[2]))
+    def test_empty_plain_file_does_not_mask_compressed_parent(self):
+        p=self.rollout(A);base=self.base(p,A);compressed=self.compress(p)
+        p.write_bytes(b'');self.rollout(B,base=base,ordinal=1)
+        before=compressed.read_bytes();nodes,_,errors=lineage.validate([self.root])
+        self.assertFalse(errors);self.assertEqual(len(nodes),2)
+        self.assertEqual(p.stat().st_size,0);self.assertEqual(compressed.read_bytes(),before)
+    def test_empty_compressed_file_is_not_ignored(self):
+        p=self.rollout(A);p.unlink();p.with_suffix('.jsonl.zst').write_bytes(b'')
+        self.assertTrue(lineage.validate([self.root])[2])
+
+    def test_empty_reference_uuid_case_does_not_bypass_check(self):
+        parent='abcdefab-0000-0000-0000-000000000001'
+        p=self.rollout(parent,session=parent);p.write_bytes(b'')
+        p.rename(p.with_name(p.name.replace(parent,parent.upper())))
+        q=self.rollout(B,session=B);record=json.loads(q.read_text())
+        record['payload'].update(history_mode='legacy',forked_from_id=parent)
+        q.write_text(json.dumps(record)+'\n')
+        self.assertIn('empty source rollout',' '.join(lineage.validate([self.root])[2]))
+
 if __name__=='__main__':unittest.main()

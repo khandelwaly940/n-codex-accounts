@@ -100,6 +100,8 @@ Compressed `.jsonl.zst` histories are validated without rewriting them. If an ol
 
 **Seeing `HTTP Error 403: rate limit exceeded`?** Older helpers checked GitHub's REST API, whose anonymous allowance is shared by office/VPN users. Version **0.2.11** checks the public release redirect instead. Download a **fresh** [ncodex-bootstrap.command](https://github.com/khandelwaly940/n-codex-accounts/releases/latest/download/ncodex-bootstrap.command), then run `python3 ~/Downloads/ncodex-bootstrap.command`. Review the plan and approve it; add `--plan` for inspection only. Reusing an older downloaded bootstrap can reproduce the error. After this one-time recovery, use `ncodex update` normally. No GitHub token or Codex relogin is required. GitHub's website/downloads can still have separate network or throttling failures.
 
+**An empty rollout blocks an older updater?** Version **0.2.13** retains and ignores zero-byte JSONL rollouts with recognizable UUID filenames only when no other readable rollout references them. Referenced empties, malformed nonempty files, and files changing during validation still stop the update. An empty plain file no longer hides a valid compressed copy. No chat file is deleted or repaired. Use a fresh bootstrap if the installed validator blocks the update; running the old `ncodex update` alone cannot replace its own failing validation code. Future update plans validate with the checksum-verified downloaded release's validator.
+
 Update errors show a short reason; longer diagnostic text is saved privately in `~/.local/share/n-codex-accounts/update-error.json`. Users upgrading from 0.2.1 or earlier may see the previous update screen once; the compact screen applies after installing 0.2.2 or later, or immediately through the latest downloaded bootstrap.
 
 ## Everyday use
@@ -138,7 +140,7 @@ CLI baseline updated on **26 November 2026**; extension review from 27 September
 | Codex CLI | **0.172.0** recommended; **0.158.0**, **0.159.0**, **0.159.2**, **0.160.0**, **0.160.1**, **0.161.0**, **0.162.1**, **0.163.0**, **0.164.0**, **0.169.0** supported |
 | VS Code extension `openai.chatgpt` | **26.917.62051** |
 | Codex bundled with that extension | **0.155.0-alpha.16.3** |
-| This installer | **0.2.12** |
+| This installer | **0.2.13** |
 
 **Offline regression tests cover** installation, repeat installation, account routing, migration, shared-history checks, failure recovery, and daily notices. The extension package and bundled command interface were inspected separately. Real login, model requests, and VS Code chats were not used to certify this release. After installing, try a simple request per account and a sequential cross-account chat resume. Intel macOS has not been tested on Intel hardware.
 

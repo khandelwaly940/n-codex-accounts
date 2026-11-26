@@ -20,7 +20,7 @@ import tempfile
 import urllib.request
 import urllib.error
 
-VERSION = '0.2.12'
+VERSION = '0.2.13'
 REPO = 'khandelwaly940/n-codex-accounts'
 PARTS = ('sessions', 'archived_sessions', 'attachments', 'thread-writer-locks')
 SOURCE = Path(__file__).resolve().parent
@@ -212,7 +212,7 @@ def merge_index(a, b):
     return {'attachmentPaths': paths, 'pendingRemovalPaths': pending, 'textExcerptsByPath': excerpts}
 
 
-def union(homes, stage):
+def union(homes, stage, validator=None):
     for part in PARTS:
         target = stage / part; target.mkdir(parents=True)
         if part == 'thread-writer-locks': continue  # Preserve canonical lock tree; never copy stale account locks.
@@ -233,7 +233,7 @@ def union(homes, stage):
                         write(out, merge_index(json.loads(out.read_text()), json.loads(item.read_text())))
                     else: raise ValueError(f'Conflicting file: {relative}; nothing overwritten')
                 elif not out.exists(): shutil.copy2(item, out)
-    subprocess.run([sys.executable, str(SOURCE / 'validate_lineage.py'), str(stage / 'sessions'),
+    subprocess.run([sys.executable, str(validator or SOURCE / 'validate_lineage.py'), str(stage / 'sessions'),
                     str(stage / 'archived_sessions')], check=True, stdout=subprocess.DEVNULL)
 
 
@@ -256,9 +256,10 @@ def plan(user, payload, stage):
     if changed_layout:
         watched += [home/p for home in homes for p in PARTS if p != 'thread-writer-locks']
     before = fingerprint(watched)
-    if changed_layout: union(homes, stage)
+    validator = payload / 'setup/validate_lineage.py'
+    if changed_layout: union(homes, stage, validator)
     else:
-        subprocess.run([sys.executable, str(SOURCE/'validate_lineage.py'), str(canonical/'sessions'), str(canonical/'archived_sessions')], check=True, stdout=subprocess.DEVNULL)
+        subprocess.run([sys.executable, str(validator), str(canonical/'sessions'), str(canonical/'archived_sessions')], check=True, stdout=subprocess.DEVNULL)
     if fingerprint(watched) != before: raise ValueError('Installation changed while planning; retry after work is idle')
     binary = os.environ.get('CODEX_REAL_BINARY') or shutil.which('codex')
     if not binary: raise ValueError('Real Codex executable is not available')
